@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 query = "{query}"
 
 require "openssl"
@@ -9,11 +10,10 @@ load "alfred_workflow.rb"
 load "crypt.rb"
 
 keepass_server = "http://localhost:19455"
-key_name = "MBP-Chrome"
-aes_key = "DBn3Wrqd7rFHu8cgPXCnEzIWgaUXcRXzOplkskcy9fo="
-# url = "http://" + query
-url = ARGV[0]
-
+key_name = "46B6922F-3811-4239-86D2-5AD8E5065459"
+aes_key = "bQT1VBpbKBqiIrL01eJXpIkS6Jb6ybHJEx22v0taAv8="
+url = "http://" + query
+# url = ARGV[0]
 
 iv = OpenSSL::Cipher::Cipher.new("AES-256-CBC").random_iv
 nonce = b64enc(iv)
@@ -41,10 +41,11 @@ end
 
 body = JSON.parse(res.body)
 resp_nonce = body["Nonce"]
+# puts body
 # puts body["Entries"]
 
+items = { items: [] }
 
-alfred_xml =  AlfredXmlFormatter.new
 entries = body["Entries"]
 entries.each do |entry|
 	title = entry["Name"]
@@ -55,9 +56,8 @@ entries.each do |entry|
 	username_plain = decrypt(username, aes_key, resp_nonce)
 	password_plain = decrypt(password, aes_key, resp_nonce)
 
-	kp = KeepassItem.new(title_plain, username_plain, password_plain)
-	alfred_xml.add_kp(kp)
-	
+	kp = AlfredItem.new(title_plain, username_plain, password_plain)
+	items.items.push(kp)
 end
 
-puts alfred_xml.to_string
+puts items.to_json
