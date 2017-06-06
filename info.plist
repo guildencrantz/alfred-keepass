@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>com.shuolingdeng.keepass_workflow</string>
+	<key>category</key>
+	<string>Tools</string>
+	<key>connections</key>
+	<dict>
+		<key>7DD3BDE5-A157-42E5-9376-F681FB50A4EE</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>DE81E269-EC0D-48C1-A5AD-EC3D2D772696</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>FD23D608-F33E-46C7-A0D6-D6B385EEBA18</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>7DD3BDE5-A157-42E5-9376-F681FB50A4EE</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+	</dict>
+	<key>createdby</key>
+	<string>Samuel Deng</string>
+	<key>description</key>
+	<string></string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>keepass</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>0</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>kp</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<false/>
+				<key>queuedelaymode</key>
+				<integer>1</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Loading</string>
+				<key>script</key>
+				<string># encoding: utf-8
+
+query = "{query}"
+
+require "openssl"
+require "base64"
+require "net/http"
+require "json"
+load "alfred_workflow.rb"
+load "crypt.rb"
+
+keepass_server = "http://localhost:19455"
+key_name = "46B6922F-3811-4239-86D2-5AD8E5065459"
+aes_key = "bQT1VBpbKBqiIrL01eJXpIkS6Jb6ybHJEx22v0taAv8="
+url = "http://" + query
+# url = ARGV[0]
+
+iv = OpenSSL::Cipher::Cipher.new("AES-256-CBC").random_iv
+nonce = b64enc(iv)
+
+veri = encrypt(nonce, aes_key, iv)
+url = encrypt(url, aes_key, iv)
+
+query_body = {
+  RequestType: "get-logins",
+  Id: key_name,
+  Nonce: nonce,
+  Verifier: veri,
+  Url: url,
+}.to_json
+
+# puts query_body
+
+uri = URI(keepass_server)
+req = Net::HTTP::Post.new(uri, 'Content-Type' =&gt; 'application/json')
+req.body = query_body
+res = Net::HTTP.start(uri.hostname, uri.port) do |http|
+  http.request(req)
+end
+# puts res.body
+
+body = JSON.parse(res.body)
+resp_nonce = body["Nonce"]
+# puts body
+# puts body["Entries"]
+
+items = { items: [] }
+
+entries = body["Entries"]
+entries.each do |entry|
+	title = entry["Name"]
+	username = entry["Login"]
+	password = entry["Password"]
+
+	title_plain = decrypt(title, aes_key, resp_nonce)
+	username_plain = decrypt(username, aes_key, resp_nonce)
+	password_plain = decrypt(password, aes_key, resp_nonce)
+
+	kp = AlfredItem.new(title_plain, username_plain, password_plain)
+	items[:items].push(kp)
+end
+
+puts items.to_json
+				</string>
+				<key>scriptargtype</key>
+				<integer>0</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string>eg. kp google.com</string>
+				<key>title</key>
+				<string>Find Password</string>
+				<key>type</key>
+				<integer>2</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>7DD3BDE5-A157-42E5-9376-F681FB50A4EE</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>action</key>
+				<integer>0</integer>
+				<key>argument</key>
+				<integer>0</integer>
+				<key>focusedappvariable</key>
+				<false/>
+				<key>focusedappvariablename</key>
+				<string></string>
+				<key>hotkey</key>
+				<integer>15</integer>
+				<key>hotmod</key>
+				<integer>1310720</integer>
+				<key>hotstring</key>
+				<string>P</string>
+				<key>leftcursor</key>
+				<false/>
+				<key>modsmode</key>
+				<integer>0</integer>
+				<key>relatedAppsMode</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.trigger.hotkey</string>
+			<key>uid</key>
+			<string>FD23D608-F33E-46C7-A0D6-D6B385EEBA18</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>68</integer>
+				<key>script</key>
+				<string>on run argv
+  tell application "System Events"	keystroke "{query}"
+  end tell
+end run</string>
+				<key>scriptargtype</key>
+				<integer>0</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>6</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>DE81E269-EC0D-48C1-A5AD-EC3D2D772696</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+	</array>
+	<key>readme</key>
+	<string>None</string>
+	<key>uidata</key>
+	<dict>
+		<key>7DD3BDE5-A157-42E5-9376-F681FB50A4EE</key>
+		<dict>
+			<key>xpos</key>
+			<integer>500</integer>
+			<key>ypos</key>
+			<integer>140</integer>
+		</dict>
+		<key>DE81E269-EC0D-48C1-A5AD-EC3D2D772696</key>
+		<dict>
+			<key>xpos</key>
+			<integer>700</integer>
+			<key>ypos</key>
+			<integer>140</integer>
+		</dict>
+		<key>FD23D608-F33E-46C7-A0D6-D6B385EEBA18</key>
+		<dict>
+			<key>xpos</key>
+			<integer>300</integer>
+			<key>ypos</key>
+			<integer>140</integer>
+		</dict>
+	</dict>
+	<key>webaddress</key>
+	<string>https://github.com/samueldeng/alfred-keepass</string>
+</dict>
+</plist>
