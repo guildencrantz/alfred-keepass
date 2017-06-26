@@ -15,7 +15,14 @@ class AlfredItem
 		{
 			title: @title,
 			subtitle: @subtitle,
-			arg: @arg
+			arg: @arg,
+			mods: {
+				alt: {
+					valid: true,
+					arg: @subtitle,
+					subtitle: 'Type: ' + @subtitle,
+				},
+			},
 		}
 	end
 
