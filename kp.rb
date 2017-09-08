@@ -1,4 +1,8 @@
+#!/usr/bin/ruby
+
 # encoding: utf-8
+
+#puts ARGV
 
 query = "{query}"
 
@@ -13,9 +17,9 @@ keepass_server = "http://localhost:19455"
 key_name = "46B6922F-3811-4239-86D2-5AD8E5065459"
 aes_key = "bQT1VBpbKBqiIrL01eJXpIkS6Jb6ybHJEx22v0taAv8="
 url = "http://" + query
-# url = ARGV[0]
 
 iv = OpenSSL::Cipher::Cipher.new("AES-256-CBC").random_iv
+#puts iv
 nonce = b64enc(iv)
 
 veri = encrypt(nonce, aes_key, iv)
@@ -29,7 +33,7 @@ query_body = {
   Url: url,
 }.to_json
 
-# puts query_body
+#puts query_body
 
 uri = URI(keepass_server)
 req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
@@ -37,14 +41,14 @@ req.body = query_body
 res = Net::HTTP.start(uri.hostname, uri.port) do |http|
   http.request(req)
 end
-# puts res.body
+#puts res.body
 
 body = JSON.parse(res.body)
 resp_nonce = body["Nonce"]
-# puts body
-# puts body["Entries"]
+#puts body
+#puts body["Entries"]
 
-items = { items: [] }
+alfred = { items: [] }
 
 entries = body["Entries"]
 entries.each do |entry|
@@ -57,7 +61,8 @@ entries.each do |entry|
 	password_plain = decrypt(password, aes_key, resp_nonce)
 
 	kp = AlfredItem.new(title_plain, username_plain, password_plain)
-	items.items.push(kp)
+	#puts kp.to_json
+	alfred[:items].push(kp)
 end
 
-puts items.to_json
+puts alfred.to_json
